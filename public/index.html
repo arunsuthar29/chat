@@ -92,6 +92,7 @@ body{
 .send-btn:hover{
   background:#45a049;
 }
+
 #emoji-btn{
   font-size:20px;
   border:none;
@@ -100,9 +101,7 @@ body{
   margin-right:8px;
 }
 
-
 </style>
-
 </head>
 
 <body>
@@ -121,25 +120,71 @@ Temporary Chat
 <button class="send-btn" onclick="send()">Send</button>
 </div>
 
-
 </div>
 
-<script src="/socket.io/socket.io.js"></script>
-
-<!-- Emoji library -->
-<script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.2/dist/emoji-button.min.js"></script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
 <script>
+
 const socket = io();
 
 const roomId = new URLSearchParams(window.location.search).get("room") || "demo";
-socket.emit("join-room", roomId);
 
-socket.on("receive-message", msg => {
+let password = prompt("Enter room password");
+
+if (!password) {
+  alert("Password required to enter chat");
+  location.reload();
+}
+
+socket.emit("join-room", { roomId, password });
+
+/* -------------------------------
+   Password Errors
+--------------------------------*/
+
+socket.on("wrong-password", () => {
+  alert("Wrong password!");
+  location.reload();
+});
+
+socket.on("room-full", () => {
+  alert("Room already has 2 users.");
+  window.location.href = "/";
+});
+
+/* -------------------------------
+   Load Old Messages
+--------------------------------*/
+
+socket.on("load-messages", messages => {
 
   const chat = document.getElementById("chat");
-  const messageDiv = document.createElement("div");
+  chat.innerHTML = "";
 
+  messages.forEach(msg => {
+    renderMessage(msg);
+  });
+
+});
+
+/* -------------------------------
+   Receive Message
+--------------------------------*/
+
+socket.on("receive-message", msg => {
+  renderMessage(msg);
+});
+
+/* -------------------------------
+   Render Message
+--------------------------------*/
+
+function renderMessage(msg){
+
+  const chat = document.getElementById("chat");
+
+  const messageDiv = document.createElement("div");
   messageDiv.classList.add("message");
 
   if(msg.sender === socket.id){
@@ -152,9 +197,15 @@ socket.on("receive-message", msg => {
 
   chat.appendChild(messageDiv);
   chat.scrollTop = chat.scrollHeight;
-});
+
+}
+
+/* -------------------------------
+   Send Message
+--------------------------------*/
 
 function send(){
+
   const input = document.getElementById("msg");
 
   if(!input.value.trim()) return;
@@ -165,35 +216,37 @@ function send(){
   });
 
   input.value = "";
+
 }
+
+/* -------------------------------
+   Enter Key Send
+--------------------------------*/
+
+document.getElementById("msg").addEventListener("keypress", function(e){
+  if(e.key === "Enter"){
+    send();
+  }
+});
+
 </script>
 
 <script type="module">
 import { EmojiButton } from "https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.4/+esm";
 
-document.addEventListener("DOMContentLoaded", () => {
+const button = document.querySelector('#emoji-btn');
+const input = document.querySelector('#msg');
 
-  const button = document.querySelector('#emoji-btn');
-  const input = document.querySelector('#msg');
+const picker = new EmojiButton();
 
-  const picker = new EmojiButton();
-
-  picker.on('emoji', emoji => {
+picker.on('emoji', emoji => {
   input.value += emoji.emoji;
 });
 
-
-  button.addEventListener('click', () => {
-    picker.togglePicker(button);
-  });
-
+button.addEventListener('click', () => {
+  picker.togglePicker(button);
 });
 </script>
-
-
-
-
-
 
 </body>
 </html>

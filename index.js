@@ -9,6 +9,7 @@ const server = http.createServer(app);
 /* -------------------------------
    Socket.io Setup
 --------------------------------*/
+const ROOM_PASSWORD = "arunpapa";
 
 const io = new Server(server, {
   cors: {
@@ -48,13 +49,16 @@ io.on("connection", (socket) => {
   socket.on("join-room", ({ roomId, password }) => {
 
     if (!roomId || !password) return;
-
+ if (password !== ROOM_PASSWORD) {
+    socket.emit("wrong-password");
+    return;
+  }
     // Create room if it doesn't exist
     if (!rooms[roomId]) {
 
       rooms[roomId] = {
         messages: [],
-        password: password,
+        
         users: new Set(),
         createdAt: Date.now()
       };
@@ -72,7 +76,7 @@ io.on("connection", (socket) => {
 
     /* Password verification */
 
-    if (room.password !== password) {
+    if (password !== ROOM_PASSWORD) {
       socket.emit("wrong-password");
       return;
     }
